@@ -1,5 +1,6 @@
 import lxml.html
 import scraperwiki
+import requests
 import time
 import sys
 
@@ -63,7 +64,7 @@ fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
 for fuelType in fuelTypes:
     fuelTypeURL = "http://globalenergyobservatory.org/list.php?db=PowerPlants&type=" + fuelType
     print fuelTypeURL
-    root = lxml.html.fromstring(scraperwiki.scrape(fuelTypeURL))
+    root = lxml.html.fromstring(requests.get(fuelTypeURL).text)
     links = root.xpath("//tr[@class='odd_perf' or @class='even_perf']/td[1]/a/@href")
 
     for link in links:
@@ -73,7 +74,7 @@ for fuelType in fuelTypes:
         print plantURL
 
         try:
-            html = scraperwiki.scrape(plantURL).decode('utf-8')
+            html = requests.get(plantURL).text
             root = lxml.html.fromstring(html)
         except:
             print "Error downloading " + plantURL
