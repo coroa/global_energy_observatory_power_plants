@@ -3,6 +3,7 @@ import scraperwiki
 import requests
 import time
 import sys
+import os
 
 # these fields don't contain any data
 # too many fields also cause a SqliteError: sqliteexecute:
@@ -53,10 +54,14 @@ scraperwiki.sqlite.execute(
 )
 
 # figure out what's already been downloaded
-# knownIDs = scraperwiki.scrape("https://api.scraperwiki.com/api/1.0/datastore/sqlite?format=csv&name=global_energy_observatory_power_plants&query=select%20distinct%20replace(CurrentPage_sys%2C%20'%2Fgeoid%2F'%2C%20'')%20as%20id%20from%20%60powerplants%60")
-# knownIDs = knownIDs.split("\r\n")
-# del knownIDs[0] # first element is the header
-# print knownIDs
+morph_api_url = "https://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
+
+knownIDs = frozenset(
+    requests.get(morph_api_url, params={
+        'key': os.environ['MORPH_API_KEY'],
+        'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants"
+    }).text.split('\n')[1:-1]
+)
 
 fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
              "Solar_PV", "Solar_Thermal", "Waste", "Wind"]
@@ -72,6 +77,7 @@ for fuelType in fuelTypes:
         plantURL = "http://globalenergyobservatory.org/" + link
 
         print plantURL
+        if plantID in knownIDs: continue
 
         try:
             html = requests.get(plantURL).text
