@@ -54,7 +54,7 @@ scraperwiki.sqlite.execute(
 )
 
 # figure out what's already been downloaded
-morph_api_url = "https://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
+morph_api_url = "http://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
 
 knownIDs = frozenset(
     requests.get(morph_api_url, params={
