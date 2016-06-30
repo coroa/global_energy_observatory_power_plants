@@ -4,6 +4,7 @@ import requests
 import time
 import sys
 import os
+from datetime import date
 
 # these fields don't contain any data
 # too many fields also cause a SqliteError: sqliteexecute:
@@ -57,10 +58,10 @@ scraperwiki.sqlite.execute(
 morph_api_url = "http://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
 
 knownIDs = frozenset(
-    requests.get(morph_api_url, params={
-        'key': os.environ['MORPH_API_KEY'],
-        'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants"
-    }).text.split('\n')[1:-1]
+    # requests.get(morph_api_url, params={
+    #     'key': os.environ['MORPH_API_KEY'],
+    #     'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants WHERE `Date_of_Scraping` >= date('now','-2 month')"
+    # }).text.split('\n')[1:-1]
 )
 
 fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
@@ -131,6 +132,8 @@ for fuelType in fuelTypes:
         # select Description_ID, CurrentPage_sys, GEO_Assigned_Identification_Number from `swdata` where Description_ID != GEO_Assigned_Identification_Number OR replace(CurrentPage_sys, "/geoid/", "") != GEO_Assigned_Identification_Number
         # Using GEO_Assigned_Identification_Number, it corresponds to CurrentPage_sys except in one case
 
+        installationInfo['Date_of_Scraping'] = date.today()
+
         try:
             #primary key is based on id
             scraperwiki.sqlite.save(unique_keys=["GEO_Assigned_Identification_Number"],
@@ -143,4 +146,4 @@ for fuelType in fuelTypes:
         except:
             print "Error saving to DB" + ": " + str(sys.exc_info()[1])
 
-        time.sleep(5) #sleep a little to be kind to the server, running into "Temporary failure in name resolution"
+        time.sleep(2) #sleep a little to be kind to the server, running into "Temporary failure in name resolution"
