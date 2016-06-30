@@ -51,7 +51,8 @@ scraperwiki.sqlite.execute(
     u"(Name TEXT, Type TEXT, Country TEXT, State TEXT,"
     u" Type_of_Plant_rng1 TEXT, Type_of_Fuel_rng1_Primary TEXT,"
     u" Type_of_Fuel_rng2_Secondary TEXT,"
-    u" Design_Capacity_MWe_nbr NUMBER)"
+    u" Design_Capacity_MWe_nbr NUMBER,"
+    u" Date_of_Scraping TEXT)"
 )
 
 # figure out what's already been downloaded
