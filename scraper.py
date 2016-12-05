@@ -59,10 +59,10 @@ scraperwiki.sqlite.execute(
 morph_api_url = "http://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
 
 knownIDs = frozenset(
-    # requests.get(morph_api_url, params={
-    #     'key': os.environ['MORPH_API_KEY'],
-    #     'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants WHERE `Date_of_Scraping` >= date('now','-2 month')"
-    # }).text.split('\n')[1:-1]
+    requests.get(morph_api_url, params={
+        'key': os.environ['MORPH_API_KEY'],
+        'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants WHERE `Date_of_Scraping` >= date('now','-1 month')"
+    }).text.split('\n')[1:-1]
 )
 
 fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
