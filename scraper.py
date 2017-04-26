@@ -4,6 +4,9 @@ import requests
 import time
 import sys
 import os
+from operator import itemgetter
+from six.moves import map
+from itertools import product
 from datetime import date
 
 # these fields don't contain any data
@@ -48,7 +51,8 @@ def makeNiceKey(value):
 
 scraperwiki.sqlite.execute(
     u"CREATE TABLE IF NOT EXISTS powerplants"
-    u"(Name TEXT, Type TEXT, Country TEXT, State TEXT,"
+    u"(GEO_Assigned_Identification_Number TEXT,"
+    u" Name TEXT, Type TEXT, Country TEXT, State TEXT,"
     u" Type_of_Plant_rng1 TEXT, Type_of_Fuel_rng1_Primary TEXT,"
     u" Type_of_Fuel_rng2_Secondary TEXT,"
     u" Design_Capacity_MWe_nbr NUMBER,"
@@ -56,14 +60,14 @@ scraperwiki.sqlite.execute(
 )
 
 # figure out what's already been downloaded
-morph_api_url = "http://api.morph.io/coroa/global_energy_observatory_power_plants/data.csv"
-
-knownIDs = frozenset(
-    requests.get(morph_api_url, params={
-        'key': os.environ['MORPH_API_KEY'],
-        'query': "SELECT `GEO_Assigned_Identification_Number` FROM powerplants WHERE `Date_of_Scraping` >= date('now','-1 month')"
-    }).text.split('\n')[1:-1]
+recentlyupdatedIDs = frozenset(
+    map(itemgetter('geoid'),
+        scraperwiki.sqlite.select("`GEO_Assigned_Identification_Number` AS geoid"
+                                  " FROM powerplants"
+                                  " WHERE `Date_of_Scraping` >= date('now','-1 month')"))
 )
+
+updatedIDs = set()
 
 fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
              "Solar_PV", "Solar_Thermal", "Waste", "Wind"]
@@ -78,8 +82,8 @@ for fuelType in fuelTypes:
         plantID = link.replace("geoid/", "")
         plantURL = "http://globalenergyobservatory.org/" + link
 
+        if plantID in recentlyupdatedIDs: continue
         print plantURL
-        if plantID in knownIDs: continue
 
         try:
             html = requests.get(plantURL).text
@@ -147,7 +151,24 @@ for fuelType in fuelTypes:
                     unique_keys=["GEO_Assigned_Identification_Number", "Unit_Nbr"],
                     data=unitList, table_name="ppl_units"
                 )
+
+            updatedIDs.add(plantID)
         except:
             print "Error saving to DB" + ": " + str(sys.exc_info()[1])
 
         time.sleep(2) #sleep a little to be kind to the server, running into "Temporary failure in name resolution"
+
+# Remove old cruft, i.e. everything that has not been updated although
+# it was scheduled to
+
+allIDs = set(map(itemgetter('geoid'),
+                 scraperwiki.sqlite.select("`GEO_Assigned_Identification_Number` AS geoid"
+                                           " FROM powerplants")))
+oldIDs = allIDs - (updatedIDs | recentlyupdatedIDs)
+
+if len(oldIDs):
+    for table, i in product(['powerplants', 'ppl_units'], oldIDs):
+        scraperwiki.sqlite.execute('DELETE FROM %s WHERE `GEO_Assigned_Identification_Number`="%s"' % (table, i))
+    scraperwiki.sqlite.commit()
+
+    print "Removed {} old entries from database".format(len(oldIDs))
