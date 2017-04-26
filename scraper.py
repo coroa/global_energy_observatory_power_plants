@@ -136,12 +136,15 @@ for fuelType in fuelTypes:
         installationInfo['Date_of_Scraping'] = date.today()
 
         try:
+            assert 'GEO_Assigned_Identification_Number' in installationInfo, \
+                "No GEO_Assigned_Identification_Number given"
+
             #primary key is based on id
             scraperwiki.sqlite.save(unique_keys=["GEO_Assigned_Identification_Number"],
                                     data=installationInfo, table_name="powerplants")
             if len(unitList) > 0:
                 scraperwiki.sqlite.save(
-                    unique_keys=["GEO_Assigned_Identification_Number","Unit_Nbr"],
+                    unique_keys=["GEO_Assigned_Identification_Number", "Unit_Nbr"],
                     data=unitList, table_name="ppl_units"
                 )
         except:
