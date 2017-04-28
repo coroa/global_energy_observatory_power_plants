@@ -5,8 +5,7 @@ import time
 import sys
 import os
 from operator import itemgetter
-from six.moves import map
-from itertools import product
+from itertools import product, imap as map
 from datetime import date
 
 # these fields don't contain any data
