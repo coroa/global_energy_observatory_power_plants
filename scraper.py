@@ -8,6 +8,7 @@ from operator import itemgetter
 from itertools import product, imap as map
 from datetime import date
 
+
 # these fields don't contain any data
 # too many fields also cause a SqliteError: sqliteexecute:
 # sqlite3.Error: too many SQL variables This seems to occur when ever
