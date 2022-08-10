@@ -1,13 +1,16 @@
 import lxml.html
-import scraperwiki
+import os
 import requests
 import time
 import sys
-import os
 from operator import itemgetter
-from itertools import product, imap as map
+from itertools import product
 from datetime import date
 
+# Overwrite database name to reflect morph defaults before loading scraperwiki
+os.environ["SCRAPERWIKI_DATABASE_NAME"] = "sqlite:///data.sqlite"
+
+import scraperwiki
 
 # these fields don't contain any data
 # too many fields also cause a SqliteError: sqliteexecute:
@@ -19,17 +22,16 @@ def removeBogusColumnsFromDict(d):
                            "Color", "Levels", "LinesCount",
                            "NumberOf", "Num_Levels", "Opacity",
                            "Overlay_", "Zoom_Factor", "Weight"]
-    for key in d.keys():
-        if any(key.startswith(pat) for pat in keyPatternsToDelete):
-            del d[key]
-
-    return d
+    return {
+        k: v for k, v in d.items()
+        if not any(k.startswith(pat) for pat in keyPatternsToDelete)
+    }
 
 def checkForValue(value):
-        if len(value) > 0:
-                return unicode(value[0])
-        else:
-                return ""
+    if len(value) > 0:
+            return str(value[0])
+    else:
+            return ""
 
 #remove problem characters that don't work as sql column names
 def makeNiceKey(value):
@@ -74,7 +76,7 @@ fuelTypes = ["Coal", "Gas", "Oil", "Hydro", "Geothermal", "Nuclear",
 
 for fuelType in fuelTypes:
     fuelTypeURL = "http://globalenergyobservatory.org/list.php?db=PowerPlants&type=" + fuelType
-    print fuelTypeURL
+    print(fuelTypeURL)
     root = lxml.html.fromstring(requests.get(fuelTypeURL).text)
     links = root.xpath("//tr[@class='odd_perf' or @class='even_perf']/td[1]/a/@href")
 
@@ -83,13 +85,13 @@ for fuelType in fuelTypes:
         plantURL = "http://globalenergyobservatory.org/" + link
 
         if plantID in recentlyupdatedIDs: continue
-        print plantURL
+        print(plantURL)
 
         try:
             html = requests.get(plantURL).text
             root = lxml.html.fromstring(html)
         except:
-            print "Error downloading " + plantURL
+            print(f"Error downloading {plantURL}")
 
         installationInfo = dict()
         unitList = list()
@@ -113,7 +115,7 @@ for fuelType in fuelTypes:
                 and len(valueVal) > 0 and len(idVal) > 0):
                 if idVal == "GEO_Assigned_Identification_Number":
                     geoid = valueVal
-                if catVal <> 'UnitDescription_Block':
+                if catVal != 'UnitDescription_Block':
                     installationInfo[makeNiceKey(idVal)] = valueVal
                 else:
                     # use different table for unit details to avoid
@@ -154,7 +156,7 @@ for fuelType in fuelTypes:
 
             updatedIDs.add(plantID)
         except:
-            print "Error saving to DB" + ": " + str(sys.exc_info()[1])
+            print("Error saving to DB: " + str(sys.exc_info()[1]))
 
         time.sleep(2) #sleep a little to be kind to the server, running into "Temporary failure in name resolution"
 
@@ -171,4 +173,4 @@ if len(oldIDs):
         scraperwiki.sqlite.execute('DELETE FROM %s WHERE `GEO_Assigned_Identification_Number`="%s"' % (table, i))
     scraperwiki.sqlite.commit()
 
-    print "Removed {} old entries from database".format(len(oldIDs))
+    print(f"Removed {len(oldIDs)} old entries from database")
